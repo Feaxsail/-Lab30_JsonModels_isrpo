@@ -10,12 +10,24 @@ namespace HeroesApi.Controllers;
 [Route("api/[controller]")]
 public class HeroesController : ControllerBase
 {
+    // Задание 1
     [HttpGet]
-    public ActionResult<List<Hero>> GetAll()
+    public ActionResult<List<Hero>> GetAll([FromQuery] string? universe = null)
     {
-        return Ok(HeroesStore.Heroes);
+        var heroes = HeroesStore.Heroes.AsEnumerable();
+        
+        if (!string.IsNullOrEmpty(universe))
+        {
+            if (Enum.TryParse<Universe>(universe, true, out var universeEnum))
+            {
+                heroes = heroes.Where(h => h.Universe == universeEnum);
+            }
+        }
+        
+        return Ok(heroes.ToList());
     }
 
+    
     [HttpGet("{id}")]
     public ActionResult<Hero> GetById(int id)
     {
@@ -27,6 +39,18 @@ public class HeroesController : ControllerBase
         return Ok(hero);
     }
 
+    // Задание 2
+    [HttpGet("search")]
+    public ActionResult<List<Hero>> Search([FromQuery] string name)
+    {
+        var heroes = HeroesStore.Heroes
+            .Where(h => h.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        
+        return Ok(heroes);
+    }
+
+    
     [HttpGet("demo")]
     public ActionResult GetDemo()
     {
@@ -54,41 +78,37 @@ public class HeroesController : ControllerBase
         });
     }
 
+    
     [HttpGet("serialize")]
-public ActionResult GetSerializeDemo()
-{
-    
-    var options = new JsonSerializerOptions
+    public ActionResult GetSerializeDemo()
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() }
-    };
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true,
+            Converters = { new JsonStringEnumConverter() }
+        };
 
-    
-    var hero = new Hero
-    {
-        Id = 999,
-        Name = "Тестовый герой",
-        RealName = "Тест Тестович",
-        Universe = Universe.Marvel,
-        PowerLevel = 100,
-        Powers = new List<string> { "тестирование", "отладка" },
-        Weapon = new Weapon { Name = "Клава", IsRanged = false },
-        InternalNotes = "Эта заметка не попадёт в JSON"
-    };
+        var hero = new Hero
+        {
+            Id = 999,
+            Name = "Тестовый герой",
+            RealName = "Тест Тестович",
+            Universe = Universe.Marvel,
+            PowerLevel = 100,
+            Powers = new List<string> { "тестирование", "отладка" },
+            Weapon = new Weapon { Name = "Клава", IsRanged = false },
+            InternalNotes = "Эта заметка не попадёт в JSON"
+        };
 
-    
-    string serialized = JsonSerializer.Serialize(hero, options);
+        string serialized = JsonSerializer.Serialize(hero, options);
+        Hero deserialized = JsonSerializer.Deserialize<Hero>(serialized, options);
 
-    
-    Hero deserialized = JsonSerializer.Deserialize<Hero>(serialized, options);
-
-    return Ok(new
-    {
-        serializedJson = serialized,
-        deserializedObject = deserialized,
-        internalNotesAfterDeserialize = deserialized.InternalNotes
-    });
-}
+        return Ok(new
+        {
+            serializedJson = serialized,
+            deserializedObject = deserialized,
+            internalNotesAfterDeserialize = deserialized.InternalNotes
+        });
+    }
 }
